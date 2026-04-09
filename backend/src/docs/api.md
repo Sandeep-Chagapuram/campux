@@ -33,3 +33,12 @@ Base URL: `/api`
 
 ## Logs (admin/faculty)
 - `GET /logs?date=YYYY-MM-DD&branch=<id>&section=<id>`
+
+## Digital Permission Letter
+- `POST /permissions/student` (student) - create permission request
+- `GET /permissions/student` (student) - list own requests
+- `GET /permissions/student/:id/pdf` (student) - download approved permission PDF
+- `GET /permissions/admin?status=pending|approved|rejected` (admin) - list/filter requests
+- `PATCH /permissions/admin/:id/decision` (admin) - approve/reject request
+- `GET /permissions/admin/:id/pdf` (admin) - download approved permission PDF
+- `GET /verify/:approvalId` (public) - verify approval ID validity

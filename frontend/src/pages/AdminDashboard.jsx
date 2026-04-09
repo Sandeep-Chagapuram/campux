@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { downloadPdfFromResponse } from "../utils/downloadPdf";
 
 const AdminDashboard = () => {
   const [data, setData] = useState({ branches: [], sections: [], students: [], faculty: [] });
@@ -29,14 +30,22 @@ const AdminDashboard = () => {
   const [message, setMessage] = useState("");
   const [editingFacultyId, setEditingFacultyId] = useState(null);
   const [editingStudentId, setEditingStudentId] = useState(null);
+  const [permissionFilter, setPermissionFilter] = useState("pending");
+  const [permissionRequests, setPermissionRequests] = useState([]);
 
   const loadData = async () => {
     const { data: response } = await api.get("/admin/master-data");
     setData(response);
   };
 
+  const loadPermissionRequests = async (status = permissionFilter) => {
+    const { data: response } = await api.get(`/permissions/admin?status=${status}`);
+    setPermissionRequests(response);
+  };
+
   useEffect(() => {
     loadData();
+    loadPermissionRequests("pending");
   }, []);
 
   const addBranch = async (event) => {
@@ -118,6 +127,20 @@ const AdminDashboard = () => {
   const handleMultiSelect = (event, key, setter) => {
     const values = Array.from(event.target.selectedOptions, (option) => option.value);
     setter((prev) => ({ ...prev, [key]: values }));
+  };
+
+  const decidePermission = async (id, decision) => {
+    await api.patch(`/admin/${id}/decision`, { decision });
+    setMessage(`Permission request ${decision}`);
+    await loadPermissionRequests(permissionFilter);
+  };
+
+  const downloadPermissionPdf = async (id) => {
+    const response = await api.get(`/permissions/admin/${id}/pdf`, { responseType: "blob" });
+    await downloadPdfFromResponse(response, {
+      filename: `permission-letter-${id}.pdf`,
+      onError: (msg) => alert(msg)
+    });
   };
 
   const startEditFaculty = (faculty) => {
@@ -477,6 +500,70 @@ const AdminDashboard = () => {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">Digital Permission Requests</h3>
+          <select
+            className="input max-w-44"
+            value={permissionFilter}
+            onChange={async (e) => {
+              const value = e.target.value;
+              setPermissionFilter(value);
+              await loadPermissionRequests(value);
+            }}
+          >
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        {permissionRequests.length === 0 ? (
+          <p className="text-sm text-slate-600">No permission requests found.</p>
+        ) : (
+          <div className="space-y-2">
+            {permissionRequests.map((request) => (
+              <div key={request._id} className="border border-slate-200 rounded-lg p-3 flex justify-between gap-3">
+                <div>
+                  <p className="font-medium">{request.subject}</p>
+                  <p className="text-sm text-slate-600">
+                    {request.student?.user?.fullName} ({request.student?.rollNumber}) - {request.status}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {request.status === "pending" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-success"
+                        onClick={() => decidePermission(request._id, "approved")}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg"
+                        onClick={() => decidePermission(request._id, "rejected")}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  ) : null}
+                  {request.status === "approved" ? (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => downloadPermissionPdf(request._id)}
+                    >
+                      Download PDF
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

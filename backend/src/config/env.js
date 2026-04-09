@@ -25,5 +25,6 @@ export const env = {
   },
   whatsappEnabled: String(process.env.WHATSAPP_ENABLED).toLowerCase() === "true",
   whatsappDelayMs: Number(process.env.WHATSAPP_SEND_DELAY_MS || 3500),
-  clientUrl: process.env.CLIENT_URL || "http://localhost:5173"
+  clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
+  serverUrl: process.env.SERVER_URL || "http://localhost:5000"
 };
